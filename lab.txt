@@ -1,0 +1,57 @@
+Part 1: Exploring a gRPC service
+
+- Create a new project. Select "ASP.NET Core gRPC service" as the template using ASP.NET Core 3.1 or 5. Name the project "GreeterService".
+- Double click on the project name in the solution explorer. Notice the inclusion of greet.proto and Grpc.AspNetCore.
+- Go to launchSettings.json and in the GreeterService profile remove the http address under "applicationUrl" as a gRPC with an http endpoint doesn't make sense. Leave the https address.
+- Run the service using the GreeterService profile. Check if it starts up with the specified URL.
+- Under the proto folder, examine greet.proto. Observe the declaration of a service that has a callable function/method called SayHello that takes HelloRequest as a parameter and returns HelloReply.
+- Notice how these two are implemented.
+- Open the GreeterService class under the services folder.
+- It derives from GreeterBase. Examine this class. Notice that it contained in a file with generated code based on the proto file.
+- Study the SayHello override. The types for HelloReply and HelloRequest are generated from the proto file as well.
+
+Part 2: Creating a client
+
+- In the same solution, add a new console application project.
+- Create a folder called proto and copy over the proto file from the API. To avoid updating the file twice when changes are needed you can also right click on the folder, choose add existing item, select the item and next to the add button press the little triangle to choose "Add as link".
+- In the project file, copy over the ItemGroups concerning gRPC over from the API as well, changing the GrpcServices parameter to "Client" enabling client code generation.
+
+  <ItemGroup>
+    <Protobuf Include="Protos\greet.proto" GrpcServices="Client" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Grpc.AspNetCore" Version="2.34.0" />
+  </ItemGroup>
+
+- Build the project and check for errors.
+- In the Main method of program.cs write the following code and import the required namespaces:
+            
+            var channel = GrpcChannel.ForAddress("https://localhost:50051");
+            var client = new Greeter.GreeterClient(channel);
+            var reply = await client.SayHelloAsync(
+                              new HelloRequest { Name = "GreeterClient" });
+            Console.WriteLine("Greeting: " + reply.Message);
+            await channel.ShutdownAsync();
+            Console.WriteLine("Press any key to exit...");
+            Console.ReadKey();
+
+- A number of the used types are generated from the proto file.
+- Make sure the url used matches the URL of the API.
+- Configure the solution to run both projects at the same time. Make sure the API starts first.
+- Run and observe.
+- If the client gets a connection error you probably have a machine that's too fast :-). Try again and if it still doesn't work set a breakpoint at the first line in the client and continue when the API has started.
+- Important: retrace your steps and make sure you understand everything. If not, ask Roland!
+
+Part 3: Augmenting the service
+
+- Add another RPC method to the proto file using its own Request and Reply objects.
+- Let the client call this method to test it out.
+
+Part 4: Consuming the API from a web application
+- If you're an experienced ASP.NET Core dev: create a new web application from scratch and with the provided Blazor example as a guidance let it consume the existing or a new API. Take special note of the AddGrpcClient code in Startup.cs and how these types are consumed in the classes under "Services".
+
+- If you're not that experienced: Open the provided Blazor solution. Examine the RpcApi project first and see if you can totally understand how it sticks together. If not, Roland is your man.
+- Then take a look at startup.cs of the Blazor project. Notice that instead of create a channel etc. manually as we did in the console app we're now utilizing special grpc extension methods to register the client classes.
+- Notice how these types are used in the types under "Services". And how the services are used in the controllers and views.
+
